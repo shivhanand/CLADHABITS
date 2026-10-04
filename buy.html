@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CLADHABITS — Get Access</title>
+<script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
+<style>body{font-family:Inter,system-ui,sans-serif;background:#07142f;color:#fff;min-height:100vh;display:grid;place-items:center;margin:0}.card{width:min(440px,92vw);background:#0e2148;border:1px solid #27436f;border-radius:22px;padding:28px;box-sizing:border-box}h1{margin:0 0 8px}.muted{color:#b8c6df}input{width:100%;box-sizing:border-box;margin:8px 0;padding:13px;border-radius:12px;border:1px solid #38547f;background:#091a38;color:#fff}button{width:100%;margin-top:14px;padding:14px;border:0;border-radius:12px;font-weight:700;cursor:pointer}.status{margin-top:12px;min-height:22px}</style>
+</head><body><main class="card"><h1>CLADHABITS</h1><p class="muted">One purchase. One protected personal access.</p>
+<form id="form"><input id="name" placeholder="Full name" required><input id="email" type="email" placeholder="Email used for purchase" required><input id="phone" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" required><button>Continue to secure payment</button></form><div class="status" id="status"></div></main>
+<script>
+const form=document.getElementById('form'),status=document.getElementById('status');
+form.addEventListener('submit',async e=>{e.preventDefault();status.textContent='Creating secure payment…';try{
+ const r=await fetch('/functions/v1/cladhabits-create-order',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:name.value,email:email.value,phone:phone.value})});
+ const d=await r.json(); if(!r.ok||!d.ok) throw new Error(d.reason||'Unable to start payment');
+ const cashfree=Cashfree({mode:d.mode==='production'?'production':'sandbox'});
+ await cashfree.checkout({paymentSessionId:d.payment_session_id,redirectTarget:'_self'});
+}catch(err){status.textContent=err.message||'Payment could not be started.';}});
+</script></body></html>
