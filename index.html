@@ -247,7 +247,8 @@ function selectedMonthBestPerfectStreak(){
 }
 
 /* ===== GLOBAL APP SURFACE FIX ===== */
-html,body{  min-height:100%;
+html,body{
+  min-height:100%;
   margin:0;
   background:var(--bg) !important;
 }
@@ -745,7 +746,8 @@ function monthlyHeatmap(){
    }
    const isToday=iso(dt)===iso(today)?' today':'';
    cells+=`<button type="button" class="heat-cell ${cls}${isToday}" data-heat-date="${iso(dt)}" title="${dt.toLocaleDateString(undefined,{month:'long',day:'numeric',year:'numeric'})}: ${doneN} done · ${wrongN} wrong">${day}<span class="sr-only">${label}</span></button>`;
- } cells+='</div>';
+ }
+ cells+='</div>';
  return `<div class="monthly-heatmap-section"><div class="heatmap-head"><div><h2>Monthly Heatmap</h2><div class="muted">${cursor.toLocaleString(undefined,{month:'long',year:'numeric'})} · tap any day for details</div></div><div class="heatmap-legend"><span class="heat-legend-item"><i class="heat-swatch high"></i> Strong</span><span class="heat-legend-item"><i class="heat-swatch mid"></i> Partial</span><span class="heat-legend-item"><i class="heat-swatch low"></i> Low / wrong</span><span class="heat-legend-item"><i class="heat-swatch empty"></i> Unmarked</span></div></div><div class="heatmap-calendar">${cells}</div><div class="heat-detail" id="heatDetail"><div><div class="heat-detail-title">Select a day</div><div class="heat-detail-meta">Tap a calendar square to inspect that day's results.</div></div><div class="heat-detail-stats"><span>✓ <strong>—</strong></span><span>✕ <strong>—</strong></span><span>○ <strong>—</strong></span></div></div></div>`;
 }
 function updateHeatDetail(dateKey){
@@ -994,8 +996,7 @@ function streakCurrent(){
   let d=new Date(today),count=0;
   if(!streakSuccess(d))d.setDate(d.getDate()-1);
   while(streakSuccess(d)){
-    count++;
-    d.setDate(d.getDate()-1);
+    count++;    d.setDate(d.getDate()-1);
   }
   return count;
 }
@@ -1094,3 +1095,576 @@ function streakCenter(){
       <span class="streak-day-tooltip">${label} · ${kind==='perfect'?'Perfect':kind==='success'?'Successful':kind==='wrong'?'Wrong':'Unmarked'}${x.recorded?' · '+x.completion+'%':''}</span>
     </div>`;
   }).join('');
+
+  box.innerHTML=`<div class="streak-center-card">
+    <div class="streak-center-head">
+      <div>
+        <h2>Streak Center <span class="pill" style="font-size:10px;vertical-align:middle">FEATURE 5</span></h2>
+        <div class="muted">Your consistency streaks and recent activity for the selected month.</div>
+      </div>
+      <div class="streak-live"><span class="streak-live-dot"></span> Live</div>
+    </div>
+
+    <div class="streak-main-grid">
+      <div class="streak-hero">
+        <div class="streak-flame">🔥</div>
+        <div>
+          <div class="streak-hero-label">CURRENT STREAK</div>
+          <div class="streak-hero-value">${current}</div>
+          <div class="streak-hero-sub">${current===1?'day':'days'} without a Wrong result</div>
+        </div>
+      </div>
+
+      <div class="streak-stat">
+        <div class="streak-stat-label">Best streak</div>
+        <div class="streak-stat-value">${best}</div>
+        <div class="streak-stat-sub">${best===1?'day':'days'} · selected month</div>
+      </div>
+
+      <div class="streak-stat">
+        <div class="streak-stat-label">Perfect streak</div>
+        <div class="streak-stat-value">${perfectCurrent}</div>
+        <div class="streak-stat-sub">Current · best: ${perfectBest} this month</div>
+      </div>
+    </div>
+
+    <div class="streak-calendar-title">Last 28 days of selected month</div>
+    <div class="streak-mini-calendar">${cells}</div>
+
+    <div class="streak-insight"><strong>Today:</strong> ${message}</div>
+
+    <div class="streak-calendar-title">Habit streaks</div>
+    <div class="streak-habit-list">
+      ${state.habits.map(h=>{
+        const cur=habitMonthCurrentStreak(h),best=habitMonthBestStreak(h);
+        return `<div class="streak-habit-row">
+          <div class="streak-habit-name"><span class="dot"></span><div><strong>${esc(h.name)}</strong><div class="muted">${esc(h.category)} · ${h.mode==='avoid'?'Not Do':'Do'}</div></div></div>
+          <div class="streak-habit-stats"><span><b>${cur}</b> current</span><span><b>${best}</b> best</span></div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div class="streak-legend">
+      <span><i class="lg-perfect"></i> Perfect</span>
+      <span><i class="lg-success"></i> Successful</span>
+      <span><i class="lg-partial"></i> Partial</span>
+      <span><i class="lg-wrong"></i> Wrong</span>
+    </div>
+  </div>`;
+
+  box.querySelectorAll('[data-streak-date]').forEach(cell=>{
+    cell.addEventListener('click',()=>{
+      const d=new Date(cell.dataset.streakDate+'T00:00:00');
+      const x=streakDayData(d);
+      const title=d.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+      cell.querySelector('.streak-day-tooltip').textContent =
+        `${title} · ${x.kind==='perfect'?'Perfect':x.kind==='success'?'Successful':x.kind==='wrong'?'Wrong':'Unmarked'}${x.recorded?' · '+x.completion+'%':' · no results'}`;
+    });
+  });
+}
+
+
+/* ===== CLADHABITS FEATURE 6 — ACHIEVEMENTS & BADGES ===== */
+function achievementStats(){
+  const y=cursor.getFullYear(),m=cursor.getMonth(),n=daysInMonth(y,m);
+  let totalDone=0,totalWrong=0,totalRecorded=0,totalPerfect=0;
+
+  state.habits.forEach(h=>{
+    for(let day=1;day<=n;day++){
+      const d=new Date(y,m,day);
+      if(d>today)continue;
+      const s=status(h,d);
+      if(s===1)totalDone++;
+      else if(s===-1)totalWrong++;
+    }
+  });
+
+  totalRecorded=totalDone+totalWrong;
+
+  // Perfect days are counted only inside the selected month.
+  for(let day=1;day<=n;day++){
+    const d=new Date(y,m,day);
+    if(d>today)continue;
+    if(streakPerfect(d))totalPerfect++;
+  }
+
+  // Longest successful/perfect streak inside the selected month.
+  let bestStreak=0,run=0,bestPerfectStreak=0,perfectRun=0;
+  for(let day=1;day<=n;day++){
+    const d=new Date(y,m,day);
+    if(d>today)break;
+
+    if(streakSuccess(d)){run++;bestStreak=Math.max(bestStreak,run)}
+    else run=0;
+
+    if(streakPerfect(d)){perfectRun++;bestPerfectStreak=Math.max(bestPerfectStreak,perfectRun)}
+    else perfectRun=0;
+  }
+
+  const monthStart=new Date(y,m,1);
+  const monthEnd=new Date(y,m,n);
+
+  let habitsCreatedThisMonth=0;
+  state.habits.forEach(h=>{
+    if(h.created){
+      const created=new Date(h.created);
+      if(created>=monthStart && created<=new Date(monthEnd.getFullYear(),monthEnd.getMonth(),monthEnd.getDate(),23,59,59)){
+        habitsCreatedThisMonth++;
+      }
+    }
+  });
+
+  return {
+    totalDone,totalWrong,totalRecorded,totalPerfect,
+    bestStreak,bestPerfectStreak,habitsCreatedThisMonth
+  };
+}
+
+function achievementDefinitions(){
+  const s=achievementStats();
+
+  return [
+    {id:'first-checkin',icon:'🌱',name:'First Step',desc:'Record your first Done result this month.',test:s.totalDone>=1},
+    {id:'ten-done',icon:'⚡',name:'10 Done',desc:'Complete 10 habit check-ins this month.',test:s.totalDone>=10},
+    {id:'fifty-done',icon:'🔥',name:'50 Done',desc:'Complete 50 habit check-ins this month.',test:s.totalDone>=50},
+    {id:'hundred-done',icon:'💪',name:'100 Done',desc:'Complete 100 habit check-ins this month.',test:s.totalDone>=100},
+    {id:'streak-3',icon:'🔥',name:'3-Day Flame',desc:'Build a 3-day successful streak this month.',test:s.bestStreak>=3},
+    {id:'streak-7',icon:'🏆',name:'7-Day Warrior',desc:'Build a 7-day successful streak this month.',test:s.bestStreak>=7},
+    {id:'streak-14',icon:'🛡️',name:'14-Day Shield',desc:'Build a 14-day successful streak this month.',test:s.bestStreak>=14},
+    {id:'perfect-3',icon:'💎',name:'Perfect Trio',desc:'Reach 3 perfect days this month.',test:s.totalPerfect>=3},
+    {id:'perfect-7',icon:'👑',name:'Perfect Week',desc:'Reach 7 perfect days this month.',test:s.totalPerfect>=7},
+    {id:'habits-3',icon:'🧩',name:'Habit Builder',desc:'Have 3 active habits available this month.',test:state.habits.length>=3},
+    {id:'month-10',icon:'📅',name:'Monthly Push',desc:'Record 10 Done results this month.',test:s.totalDone>=10},
+    {id:'clean-30',icon:'✨',name:'Clean Run',desc:'Reach a 30-day successful streak within this month.',test:s.bestStreak>=30}
+  ].map(x=>({...x,reward:x.test?'Unlocked':'Keep going'}));
+}
+
+function achievements(){
+  const box=document.getElementById('achievementsMount');
+  if(!box)return;
+  const defs=achievementDefinitions();
+  const unlocked=defs.filter(x=>x.test).length;
+  const pct=Math.round(unlocked/defs.length*100);
+  const stats=achievementStats();
+
+  box.innerHTML=`<div class="achievements-card">
+    <div class="achievements-head">
+      <div>
+        <h2>Achievements & Badges <span class="pill" style="font-size:10px;vertical-align:middle">FEATURE 6</span></h2>
+        <div class="muted">Earn badges automatically. Your badge collection resets with each new month.</div>
+      </div>
+      <div class="muted" style="margin-top:8px;font-size:10px">Badge period: <strong>${cursor.toLocaleString(undefined,{month:"long",year:"numeric"})}</strong></div><div class="achievement-progress">
+        <div class="achievement-progress-top"><span>Collection progress</span><strong>${unlocked}/${defs.length}</strong></div>
+        <div class="achievement-progress-bar"><i style="width:${pct}%"></i></div>
+      </div>
+    </div>
+    <div class="badge-grid">
+      ${defs.map(x=>`<div class="badge-item ${x.test?'unlocked':'locked'}">
+        <span class="badge-state ${x.test?'earned':'locked-state'}">${x.test?'EARNED':'LOCKED'}</span>
+        <div class="badge-icon">${x.icon}</div>
+        <div class="badge-name">${x.name}</div>
+        <div class="badge-desc">${x.desc}</div>
+        <div class="badge-reward">${x.reward}</div>
+      </div>`).join('')}
+    </div>
+    <div class="achievement-summary">
+      <div class="achievement-summary-item"><div class="label">Done check-ins</div><div class="value">${stats.totalDone}</div></div>
+      <div class="achievement-summary-item"><div class="label">Best streak this month</div><div class="value">${stats.bestStreak} days</div></div>
+      <div class="achievement-summary-item"><div class="label">Perfect days this month</div><div class="value">${stats.totalPerfect}</div></div>
+    </div>
+  </div>`;
+}
+
+
+/* ===== CLADHABITS FEATURE 7 — SMART INSIGHTS ===== */
+function smartMonthData(){
+  const y=cursor.getFullYear(),m=cursor.getMonth(),n=daysInMonth(y,m);
+  let done=0,wrong=0,recorded=0,possible=0;
+  const daily=[];
+  const habitStats=[];
+
+  state.habits.forEach(h=>{
+    let hd=0,hw=0;
+    for(let day=1;day<=n;day++){
+      const d=new Date(y,m,day);
+      if(d>today)continue;
+      const s=status(h,d);
+      possible++;
+      if(s===1){done++;hd++}
+      else if(s===-1){wrong++;hw++}
+    }
+    const rec=hd+hw;
+    habitStats.push({h,done:hd,wrong:hw,rate:rec?Math.round(hd/rec*100):0,recorded:rec});
+  });
+
+  for(let day=1;day<=n;day++){
+    const d=new Date(y,m,day);
+    if(d>today)continue;
+    let dd=0,dw=0,dr=0;
+    state.habits.forEach(h=>{
+      const s=status(h,d);
+      if(s===1){dd++;dr++}
+      else if(s===-1){dw++;dr++}
+    });
+    daily.push({date:d,done:dd,wrong:dw,recorded:dr,rate:dr?Math.round(dd/dr*100):0});
+  }
+
+  const completion=done+wrong?Math.round(done/(done+wrong)*100):0;
+  const score=done+wrong?Math.round(((done-wrong)/(done+wrong)*50)+50):0;
+  const activeDays=daily.filter(x=>x.recorded>0).length;
+  const avgDaily=activeDays?Math.round(daily.filter(x=>x.recorded>0).reduce((a,x)=>a+x.rate,0)/activeDays):0;
+
+  return {done,wrong,recorded,possible,completion,score,activeDays,avgDaily,daily,habitStats};
+}
+function smartTrendDirection(data){
+  const active=data.daily.filter(x=>x.recorded>0);
+  if(active.length<4)return null;
+  const half=Math.max(2,Math.floor(active.length/2));
+  const a=active.slice(0,half),b=active.slice(-half);
+  const av=a.reduce((s,x)=>s+x.rate,0)/a.length;
+  const bv=b.reduce((s,x)=>s+x.rate,0)/b.length;
+  return {delta:Math.round(bv-av),from:Math.round(av),to:Math.round(bv)};
+}
+function smartInsights(){
+  const box=document.getElementById('smartInsightsMount');
+  if(!box)return;
+
+  const data=smartMonthData();
+  const monthName=cursor.toLocaleString(undefined,{month:'long',year:'numeric'});
+
+  if(!state.habits.length){
+    box.innerHTML=`<div class="smart-insights-card">
+      <div class="smart-insights-head">
+        <div><h2>Smart Insights <span class="pill" style="font-size:10px;vertical-align:middle">FEATURE 7</span></h2>
+        <div class="muted">Simple data-based observations from your tracker.</div></div>
+        <span class="insights-period">${monthName}</span>
+      </div>
+      <div class="trend-empty">Add habits to generate insights.</div>
+    </div>`;
+    return;
+  }
+
+  const cards=[];
+  const trend=smartTrendDirection(data);
+
+  // Consistency insight
+  if(data.recorded===0){
+    cards.push({type:'neutral',icon:'📊',title:'Start tracking',text:'No recorded check-ins yet for this month.',metric:'0 check-ins'});
+  }else if(data.completion>=80){
+    cards.push({type:'positive',icon:'🔥',title:'Strong consistency',text:'Most recorded check-ins this month are Done.',metric:data.completion+'% completion'});
+  }else if(data.completion<50){
+    cards.push({type:'warning',icon:'🧭',title:'Room to improve',text:'Less than half of recorded check-ins are Done.',metric:data.completion+'% completion'});
+  }else{
+    cards.push({type:'neutral',icon:'📈',title:'Building consistency',text:'Your completion rate is between 50% and 79%.',metric:data.completion+'% completion'});
+  }
+
+  // Trend insight
+  if(trend){
+    if(trend.delta>=8)cards.push({type:'positive',icon:'🚀',title:'Momentum is up',text:`Your later active days average higher completion than your earlier active days.`,metric:'+'+trend.delta+' pts'});
+    else if(trend.delta<=-8)cards.push({type:'warning',icon:'⚠️',title:'Momentum dipped',text:`Your later active days average lower completion than your earlier active days.`,metric:trend.delta+' pts'});
+    else cards.push({type:'neutral',icon:'〰️',title:'Steady pattern',text:'Your recent active-day completion is close to your earlier active-day average.',metric:(trend.delta>=0?'+':'')+trend.delta+' pts'});
+  }else{
+    cards.push({type:'neutral',icon:'📅',title:'Keep collecting data',text:'More active days are needed to identify a month trend.',metric:data.activeDays+' active day'+(data.activeDays===1?'':'s')});
+  }
+
+  // Best habit
+  const ranked=data.habitStats.filter(x=>x.recorded>0).sort((a,b)=>b.rate-a.rate);
+  if(ranked.length){
+    const best=ranked[0];
+    cards.push({type:'positive',icon:'🏅',title:'Top habit',text:`${best.h.name} has the highest recorded completion rate this month.`,metric:best.rate+'%'});
+  }else{
+    cards.push({type:'neutral',icon:'🏅',title:'Top habit',text:'Record some check-ins to compare habits.',metric:'—'});
+  }
+
+  // Wrong-result insight
+  if(data.wrong>=3){
+    cards.push({type:'warning',icon:'🛠️',title:'Wrong results',text:'Several Wrong results are recorded this month. Review which habits are hardest to keep.',metric:data.wrong+' wrong'});
+  }else{
+    cards.push({type:'positive',icon:'🛡️',title:'Low wrong count',text:'Your Wrong-result count is currently low for this month.',metric:data.wrong+' wrong'});
+  }
+
+  // CLAD score
+  cards.push({
+    type:data.score>=75?'positive':data.score<50?'warning':'neutral',
+    icon:'🎯',
+    title:'CLAD Score',
+    text:'Your score balances Done and Wrong results while blanks stay neutral.',
+    metric:data.recorded?data.score+'/100':'No data'
+  });
+
+  // Activity
+  cards.push({
+    type:data.activeDays>=15?'positive':data.activeDays>=5?'neutral':'warning',
+    icon:'📆',
+    title:'Tracking activity',
+    text:'Days with at least one recorded result in the selected month.',
+    metric:data.activeDays+' day'+(data.activeDays===1?'':'s')
+  });
+
+  box.innerHTML=`<div class="smart-insights-card">
+    <div class="smart-insights-head">
+      <div>
+        <h2>Smart Insights <span class="pill" style="font-size:10px;vertical-align:middle">FEATURE 7</span></h2>
+        <div class="muted">Data-based observations from your actual tracker activity.</div>
+      </div>
+      <span class="insights-period">${monthName}</span>
+    </div>
+    <div class="insights-grid">
+      ${cards.map(c=>`<div class="insight-card ${c.type}">
+        <div class="insight-icon">${c.icon}</div>
+        <div class="insight-title">${c.title}</div>
+        <div class="insight-text">${esc(c.text)}</div>
+        <div class="insight-metric">${esc(c.metric)}</div>
+      </div>`).join('')}
+    </div>
+    <div class="insights-footer">💡 Insights are calculated from your recorded Done/Wrong results for the selected month. They update when your tracker data changes.</div>
+  </div>`;
+}
+
+
+function weekly(){
+ const y=cursor.getFullYear(),m=cursor.getMonth(),n=daysInMonth(y,m);
+ const first=new Date(y,m,1),offset=(first.getDay()+6)%7,weekStart=1-offset;
+ const cards=[];
+ for(let w=0;w<6;w++){
+   const start=weekStart+w*7,end=start+6;
+   if(start>n) continue;
+   let dN=0,wN=0,bN=0,tN=0;
+   const days=[];
+   for(let k=0;k<7;k++){
+     const day=start+k;
+     if(day<1||day>n){days.push('<div class="day-card"><strong>—</strong><div class="heat"></div><small class="muted">Outside month</small></div>');continue;}
+     const dt=new Date(y,m,day); let d=0,wg=0,b=0;
+     state.habits.forEach(h=>{const st=status(h,dt);if(selectedDateIsInScope(dt)){if(st===1)d++;else if(st===-1)wg++;else b++;}});
+     dN+=d;wN+=wg;bN+=b;tN+=d+wg+b;
+     days.push(`<div class="day-card"><strong>${dt.toLocaleDateString(undefined,{weekday:'short'})}<br>${day}</strong><div class="heat">${state.habits.map(h=>{const st=status(h,dt);return `<i class="${st===1?'on':''}" style="${st===-1?'background:var(--danger);':''}" title="${esc(h.name)}"></i>`}).join('')}</div><small class="muted">✓ ${d} · ✕ ${wg}</small></div>`);
+   }
+   const pct=tN?Math.round(dN/tN*100):0;
+   const range=`${new Date(y,m,Math.max(1,start)).toLocaleDateString(undefined,{month:'short',day:'numeric'})} – ${new Date(y,m,Math.min(n,end)).toLocaleDateString(undefined,{month:'short',day:'numeric'})}`;
+   cards.push(`<div class="panel" style="margin-bottom:14px"><div class="panel-head"><div><h2>Week ${w+1}</h2><div class="muted">${range}</div></div><span class="pill">${pct}% done</span></div><div class="week-grid">${days.join('')}</div><div class="muted" style="margin-top:12px">✓ ${dN} Done · ✕ ${wN} Wrong · ○ ${bN} Unmarked</div></div>`);
+ }
+ $('#view-weekly').innerHTML=state.habits.length?cards.join(''):'<div class="panel empty">Add your first habit to start weekly tracking.</div>';
+}
+
+function monthly(){
+ const y=cursor.getFullYear(),m=cursor.getMonth(),n=daysInMonth(y,m);
+ const rows=state.habits.map(h=>{let d=0,w=0,b=0;for(let day=1;day<=n;day++){const st=status(h,new Date(y,m,day));if(st===1)d++;else if(st===-1)w++;else b++;}const recorded=d+w,p=recorded?Math.round(d/recorded*100):0;return `<div class="habit-row"><div><strong>${esc(h.name)}</strong><div class="muted">${esc(h.category)} · ${h.mode==='avoid'?'Not Do':'Do'} · target ${h.target}/week</div><div class="bar"><i style="width:${p}%"></i></div></div><span class="pill">${p}% · ${d} done</span><span class="muted">✕ ${w} · ○ ${b}</span></div>`}).join('');
+ $('#view-monthly').innerHTML=`<div class="panel"><div class="panel-head"><div><h2>${cursor.toLocaleString(undefined,{month:'long',year:'numeric'})} Overview</h2><div class="muted">Monthly performance for the selected month.</div></div></div><div class="rows">${rows||'<div class="empty">No habits yet.</div>'}</div></div>${monthlyHeatmap()}`;
+}
+
+function habits(){
+ const y=cursor.getFullYear(),m=cursor.getMonth(),n=daysInMonth(y,m);
+ const rows=state.habits.map(h=>{let d=0,w=0,b=0;for(let day=1;day<=n;day++){const st=status(h,new Date(y,m,day));if(st===1)d++;else if(st===-1)w++;else b++;}const recorded=d+w,p=recorded?Math.round(d/recorded*100):0;return `<div class="habit-row"><div><strong>${esc(h.name)}</strong><div class="muted">${esc(h.category)} · ${h.mode==='avoid'?'Not Do':'Do'} · ${h.target} days/week</div></div><span class="pill">${p}% · ${d} done</span><span class="muted">✕ ${w} wrong · ○ ${b} blank</span><button class="danger" data-del="${h.id}">Delete</button></div>`}).join('');
+ $('#view-habits').innerHTML=`<div class="panel"><div class="panel-head"><div><h2>Habit Analysis</h2><div class="muted">Analysis for ${cursor.toLocaleString(undefined,{month:'long',year:'numeric'})}.</div></div><button class="primary-btn" id="analysisAdd">+ Habit</button></div><div class="rows">${rows||'<div class="empty">No habits yet.</div>'}</div></div>`;
+ $('#analysisAdd').onclick=openModal;
+ document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{if(confirm('Delete this habit and its history?')){state.habits=state.habits.filter(h=>h.id!==b.dataset.del);Object.keys(state.logs).forEach(k=>{if(k.startsWith(b.dataset.del+'|'))delete state.logs[k]});save();render()}});
+}
+
+function tracker(){
+ const y=cursor.getFullYear(),m=cursor.getMonth(),n=daysInMonth(y,m);
+ let selectedDay=null;
+
+ const heads='<div class="head" style="cursor:default"><span class="dow">Habit</span><span class="date-num">Calendar</span></div>'+
+ Array.from({length:n},(_,i)=>{
+   const d=new Date(y,m,i+1),dow=d.toLocaleDateString(undefined,{weekday:'short'}),
+   isToday=sameDay(d,today),isWeekend=d.getDay()===0||d.getDay()===6;
+   return `<button type="button" class="head ${isToday?'today':''} ${isWeekend?'weekend':''}" data-calday="${i+1}" aria-label="${d.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'})}"><span class="dow">${dow}</span><span class="date-num">${i+1}</span></button>`;
+ }).join('');
+
+ const rows=state.habits.map(h=>
+   `<div class="habit-name"><span class="dot"></span><div><div>${esc(h.name)}</div><small class="muted">${h.mode==='avoid'?'Not Do':'Do'}</small></div></div>`+
+   Array.from({length:n},(_,i)=>{
+     const d=new Date(y,m,i+1),st=status(h,d);
+     return `<button type="button" class="check ${st===1?'done':st===-1?'wrong':''} ${future(d)?'future':''}" data-h="${h.id}" data-day="${i+1}" aria-label="${esc(h.name)} on ${d.toLocaleDateString(undefined,{month:'long',day:'numeric'})}" aria-pressed="${st===1}">${st===1?'✓':st===-1?'✕':''}</button>`;
+   }).join('')
+ ).join('');
+
+ $('#view-tracker').innerHTML=`
+ <div class="panel">
+   <div class="panel-head"><div>
+     <h2>Daily Tracker</h2>
+     <div class="muted">Calendar view · tap a date above to highlight it.</div>
+     <div class="calendar-hint" id="calendarHint">Select any date to focus on that day.</div>
+     <div class="tracker-legend">
+       <span class="legend-item"><span class="legend-dot good">✓</span> Done</span>
+       <span class="legend-item"><span class="legend-dot bad">✕</span> Wrong</span>
+       <span class="legend-item"><span class="legend-dot empty"></span> Clear</span>
+     </div>
+   </div><button class="primary-btn" id="quickAdd">+ Habit</button></div>
+   <div class="tracker" style="--tracker-days:${n}"><div class="grid" style="grid-template-columns:minmax(150px,1fr) repeat(${n},42px);min-width:${150+n*42}px">
+     ${heads}${rows||'<div class="empty" style="grid-column:1/-1">Add your first habit with the button below.</div>'}
+   </div></div>
+ </div>
+ <div id="dailyWeeklyMount"></div> <div id="progressTrendMount" class="progress-trend-section" data-range="30d" data-metric="both"></div>
+ <div id="streakCenterMount" class="streak-center-section"></div>
+ <div id="achievementsMount" class="achievements-section"></div>
+ <div id="smartInsightsMount" class="smart-insights-section"></div>`;
+
+ // Render each enhancement independently so one broken module can never hide
+ // the tracker itself.
+ const safeMount=(selector,fn)=>{
+   const el=$(selector);
+   if(!el)return;
+   try{
+     const html=fn();
+     if(typeof html==='string')el.innerHTML=html;
+   }catch(err){
+     console.error('CLADHABITS module error:',selector,err);
+     el.innerHTML='<div class="panel" style="margin-top:12px"><strong>Module temporarily unavailable</strong><div class="muted">Your tracker data is safe. Refresh after reopening the file.</div></div>';
+   }
+ };
+ safeMount('#dailyWeeklyMount',dailyWeeklyBoards);
+ try{progressTrend()}catch(err){console.error('Progress Trend:',err)}
+ try{streakCenter()}catch(err){console.error('Streak Center:',err)}
+ try{achievements()}catch(err){console.error('Achievements:',err)}
+ try{smartInsights()}catch(err){console.error('Smart Insights:',err)}
+
+ const trackerEl=$('#view-tracker');
+ const timers=new Map(),pending=new Map();
+
+ const handleTap=(b)=>{
+   const h=getHabit(b.dataset.h),d=new Date(y,m,Number(b.dataset.day));
+   if(!h)return;
+   const key=h.id+'|'+iso(d),now=Date.now(),last=pending.get(key)||0;
+   if(now-last<320){
+     clearTimeout(timers.get(key));pending.delete(key);
+     setStatus(h,d,status(h,d)===-1?0:-1);updateCheckButton(b,h,d);return;
+   }
+   pending.set(key,now);
+   timers.set(key,setTimeout(()=>{
+     if(pending.get(key)!==now)return;
+     pending.delete(key);
+     setStatus(h,d,status(h,d)===1?0:1);updateCheckButton(b,h,d);
+   },320));
+ };
+
+ const updateCheckButton=(b,h,d)=>{
+   const st=status(h,d);
+   b.classList.toggle('done',st===1);b.classList.toggle('wrong',st===-1);
+   b.textContent=st===1?'✓':st===-1?'✕':'';
+   b.setAttribute('aria-pressed',st===1?'true':'false');
+   renderStats();
+   if(activeView==='tracker'){
+     try{progressTrend()}catch(e){}
+     try{streakCenter()}catch(e){}
+     try{achievements()}catch(e){}
+     try{smartInsights()}catch(e){}
+   }
+   if(activeView==='analytics')try{analytics()}catch(e){}
+ };
+
+ trackerEl.onpointerup=(e)=>{
+   const b=e.target.closest('.check');
+   if(!b||!trackerEl.contains(b))return;
+   e.preventDefault();handleTap(b);
+ };
+
+ trackerEl.querySelectorAll('[data-calday]').forEach(btn=>btn.onclick=()=>{
+   selectedDay=Number(btn.dataset.calday);
+   trackerEl.querySelectorAll('[data-calday]').forEach(x=>x.classList.toggle('selected',x===btn));
+   const d=new Date(y,m,selectedDay);
+   $('#calendarHint').innerHTML=`Selected: <span class="calendar-selected">${d.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'})}</span>`;
+   const target=trackerEl.querySelector(`.grid .check[data-day="${selectedDay}"]`);
+   if(target)target.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+ });
+
+ $('#quickAdd').onclick=openModal;
+}
+
+function analytics(){
+ const y=cursor.getFullYear(),m=cursor.getMonth(),n=daysInMonth(y,m);
+ if(!state.habits.length){$('#view-analytics').innerHTML='<div class="analytics-card analytics-empty">Add your first habit to start building your analytics.</div>';return}
+ let doneCount=0,wrongCount=0,blankCount=0,total=0;
+ state.habits.forEach(h=>{for(let day=1;day<=n;day++){const d=new Date(y,m,day);if(!selectedDateIsInScope(d))continue;total++;const s=status(h,d);if(s===1)doneCount++;else if(s===-1)wrongCount++;else blankCount++;}});
+ const recorded=doneCount+wrongCount, completion=total?Math.round(doneCount/total*100):0, clad=recorded?Math.round(((doneCount-wrongCount)/recorded*50)+50):0;
+ const goodDeg=total?doneCount/total*360:0, badDeg=total?wrongCount/total*360:0;
+ const donutStyle=total?`background:conic-gradient(var(--good) 0deg ${goodDeg}deg,var(--danger) ${goodDeg}deg ${goodDeg+badDeg}deg,var(--line) ${goodDeg+badDeg}deg 360deg)`:'';
+ const habitRows=state.habits.map(h=>{
+   let d=0,w=0,b=0;
+   for(let day=1;day<=n;day++){const dt=new Date(y,m,day);if(!selectedDateIsInScope(dt))continue;const st=status(h,dt);if(st===1)d++;else if(st===-1)w++;else b++;}
+   const denom=d+w+b, pct=denom?Math.round(d/denom*100):0;
+   return {h,d,w,b,pct};
+ }).sort((a,b)=>b.pct-a.pct).map(x=>`<div class="performance-row"><div class="performance-name" title="${esc(x.h.name)}">${esc(x.h.name)}</div><div class="performance-bar"><i style="width:${x.pct}%"></i></div><div class="performance-pct">${x.pct}%</div></div>`).join('');
+
+ // Build real calendar weeks: Monday-Sunday, with every week getting its own
+ // circular progress board and the same reference-inspired color sequence.
+ const first=new Date(y,m,1);
+ const startOffset=(first.getDay()+6)%7;
+ const weekStart=1-startOffset;
+ const weekCards=[];
+ for(let w=0;w<6;w++){
+   const startDay=weekStart+(w*7);
+   const endDay=startDay+6;
+   if(startDay>n && w>=5) continue;
+   let dCount=0,wCount=0,bCount=0,totalChecks=0;
+   const mini=[];
+   for(let k=0;k<7;k++){
+     const dayNum=startDay+k;
+     if(dayNum<1||dayNum>n){
+       mini.push(`<div class="week-mini-day"><div>—</div><div class="week-mini-dot future"></div></div>`);
+       continue;
+     }
+     const dt=new Date(y,m,dayNum);
+     const dow=dt.toLocaleDateString(undefined,{weekday:'short'}).slice(0,2);
+     let dayDone=0,dayWrong=0,dayTracked=0;
+     state.habits.forEach(h=>{
+       if(selectedDateIsInScope(dt)){
+         const st=status(h,dt);
+         dayTracked++;
+         if(st===1){dCount++;dayDone++}
+         else if(st===-1){wCount++;dayWrong++}
+         else bCount++;
+       }
+     });
+     totalChecks+=dayTracked;
+     const mark=dayDone>0&&dayWrong===0?'✓':dayWrong>0&&dayDone===0?'✕':dayDone>0?'•':'';
+     const cls=dayDone>0&&dayWrong===0?'done':dayWrong>0?'wrong':'';
+     mini.push(`<div class="week-mini-day"><div>${dow}</div><div class="week-mini-dot ${cls}">${mark}</div><div>${dayNum}</div></div>`);
+   }
+   const pct=totalChecks?Math.round(dCount/totalChecks*100):0;
+   const startDate=new Date(y,m,Math.max(1,startDay));
+   const endDate=new Date(y,m,Math.min(n,endDay));
+   const range=startDate.toLocaleDateString(undefined,{month:'short',day:'numeric'})+' – '+endDate.toLocaleDateString(undefined,{month:'short',day:'numeric'});
+   const weekClass=`w${Math.min(w+1,6)}`;
+   weekCards.push(`<div class="week-circle-card ${weekClass}" style="--p:${pct*3.6}deg">
+     <div class="week-circle-head"><div><div class="week-circle-title">Week ${w+1}</div><div class="week-circle-range">${range}</div></div><span class="pill">${dCount} done</span></div>
+     <div class="week-circle-main">
+       <div class="week-progress-ring"><div class="week-progress-center"><strong>${pct}%</strong><span>progress</span></div></div>
+       <div class="week-mini-grid">${mini.join('')}</div>
+     </div>
+     <div class="week-result-line"><strong>✓ ${dCount}</strong> done · <strong>✕ ${wCount}</strong> wrong · ${bCount} unmarked</div>
+     <div class="week-color-bar"></div>
+   </div>`);
+ }
+ const recent=[];const recentEnd=selectedDataEnd();for(let i=6;i>=0;i--){const dt=new Date(recentEnd);dt.setDate(recentEnd.getDate()-i);let d=0,t=0;state.habits.forEach(h=>{t++;if(done(h,dt))d++;});recent.push({dt,pct:t?Math.round(d/t*100):0});}
+
+ $('#view-analytics').innerHTML=`<div class="analytics-top">
+ <div class="analytics-card"><div class="panel-head"><div><h2>Monthly Analytics</h2><div class="muted">${cursor.toLocaleString(undefined,{month:'long',year:'numeric'})} · all tracked habits</div></div></div>
+ <div class="donut-layout"><div class="analytics-donut" style="${donutStyle}"><div class="analytics-donut-center"><strong>${completion}%</strong><span>completion</span></div></div><div class="analytics-legend"><div class="analytics-legend-row"><span class="analytics-legend-label"><i class="analytics-dot good"></i> Done</span><strong>${doneCount}</strong></div><div class="analytics-legend-row"><span class="analytics-legend-label"><i class="analytics-dot bad"></i> Wrong</span><strong>${wrongCount}</strong></div><div class="analytics-legend-row"><span class="analytics-legend-label"><i class="analytics-dot empty"></i> Unmarked</span><strong>${blankCount}</strong></div></div></div>
+ <div class="analytics-kpis"><div class="analytics-kpi"><strong>${clad}/100</strong><span>CLAD Score</span></div><div class="analytics-kpi"><strong>${recorded}</strong><span>Recorded check-ins</span></div></div></div>
+ <div class="analytics-card"><div class="panel-head"><div><h2>Week-by-Week Progress</h2><div class="muted">Every calendar week has its own circular progress board. ✓ done · ✕ wrong · blank is neutral.</div></div></div>
+ <div class="weekly-circle-grid">${weekCards.join('')}</div>
+ <div class="analytics-section"><h3>Last 7 Days</h3><div class="muted">Daily completion trend</div><div class="daily-bars">${recent.map(x=>`<div class="daily-bar-col"><div class="daily-bar-pct">${x.pct}%</div><div class="daily-bar" style="height:${Math.max(3,x.pct)}%"></div><div class="daily-bar-label">${x.dt.toLocaleDateString(undefined,{weekday:'short'}).slice(0,2)}</div></div>`).join('')}</div></div></div>
+ </div>
+ <div class="analytics-card"><div class="panel-head"><div><h2>Habit Performance</h2><div class="muted">Done rate for each habit. Wrong and unmarked results remain visible in the tracker.</div></div></div><div class="performance-list">${habitRows||'<div class="analytics-empty">No habit data yet.</div>'}</div></div>${monthlyHeatmap()}`;
+}
+
+document.addEventListener('click',e=>{
+ const cell=e.target.closest?.('[data-heat-date]');
+ if(cell)updateHeatDetail(cell.dataset.heatDate);
+});
+
+document.addEventListener('click',e=>{
+ const cell=e.target.closest?.('[data-heat-date]');
+ if(cell)updateHeatDetail(cell.dataset.heatDate);
+});
+
+function openModal(){$('#modalBackdrop').classList.remove('hidden');$('#habitName').focus()}function closeModal(){$('#modalBackdrop').classList.add('hidden');$('#habitForm').reset();$('#habitMode').value='do'}function toast(msg){const t=$('#toast');t.textContent=msg;t.style.cssText='position:fixed;left:50%;bottom:25px;transform:translateX(-50%);background:#101828;color:#fff;padding:10px 15px;border-radius:10px;z-index:50;opacity:1';setTimeout(()=>t.style.opacity=0,1800)}
+$('#exportBtn').onclick=exportBackup;$('#importBtn').onclick=()=>$('#importFile').click();$('#refreshDataBtn').onclick=refreshData;$('#importFile').onchange=e=>importBackupFile(e.target.files?.[0]);$('#prevMonth').onclick=()=>{cursor.setMonth(cursor.getMonth()-1);render()};
+$('#nextMonth').onclick=()=>{cursor.setMonth(cursor.getMonth()+1);render()};
+$('#resetMonthBtn')?.addEventListener('click',resetSelectedMonth);
+$('#todayBtn').onclick=()=>{cursor=new Date(today.getFullYear(),today.getMonth(),1);render()};$('#themeBtn').onclick=()=>{state.theme=state.theme==='dark'?'light':'dark';save();render()};$('#addHabitBtn').onclick=openModal;$('#closeModal').onclick=closeModal;$('#cancelModal').onclick=closeModal;$('#modalBackdrop').onclick=e=>{if(e.target.id==='modalBackdrop')closeModal()};document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{activeView=t.dataset.view;renderViews()});$('#habitForm').onsubmit=e=>{e.preventDefault();const name=$('#habitName').value.trim();if(!name)return;state.habits.push({id:id(),name,category:$('#habitCategory').value,mode:$('#habitMode').value,target:+$('#habitTarget').value,created:new Date().toISOString()});save();closeModal();toast('Habit created');render()};render();
+
+let cladResizeTimer; window.addEventListener('resize',()=>{clearTimeout(cladResizeTimer);cladResizeTimer=setTimeout(()=>{if(activeView==='tracker')try{progressTrend();streakCenter();achievements();smartInsights()}catch(e){}},120)},{passive:true});
+</script>
+</body></html>
