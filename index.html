@@ -579,7 +579,7 @@ button{touch-action:manipulation}
 <button class="floating-add" id="addHabitBtn"><span>+</span> Add Habit</button>
 <input id="importFile" type="file" accept="application/json,.json" hidden aria-hidden="true"><div class="modal-backdrop hidden" id="modalBackdrop"><div class="modal" role="dialog" aria-modal="true"><div class="modal-head"><div><p class="eyebrow">NEW HABIT</p><h2>Add a habit</h2></div><button class="close-btn" id="closeModal">×</button></div><form id="habitForm"><label>Habit name<input id="habitName" required maxlength="40" placeholder="e.g. Workout"></label><label>Category<select id="habitCategory"><option>Fitness</option><option>Study</option><option>Health</option><option>Money</option><option>Mindset</option><option>Personal</option><option>Other</option></select></label><label>Habit type<select id="habitMode"><option value="do">Do — mark when you complete it</option><option value="avoid">Not Do — mark when you successfully avoid it</option></select></label><label>Target days per week<input id="habitTarget" type="number" min="1" max="7" value="7" required></label><div class="modal-actions"><button type="button" class="secondary-btn" id="cancelModal">Cancel</button><button type="submit" class="primary-btn">Create Habit</button></div></form></div></div><div class="toast" id="toast"></div>
 <script>
-const KEY='cladhabits-v2';const $=s=>document.querySelector(s);const today=new Date();const id=()=>Date.now().toString(36)+Math.random().toString(36).slice(2);let state;try{state=JSON.parse(localStorage.getItem(KEY))}catch(e){}state=state||{habits:[],logs:{},theme:'light'};let cursor=new Date(today.getFullYear(),today.getMonth(),1),activeView='tracker';
+const KEY='cladhabits-v2';const $=s=>document.querySelector(s);const today=new Date();const id=()=>Date.now().toString(36)+Math.random().toString(36).slice(2);let state;try{const saved=JSON.parse(localStorage.getItem(KEY)||'null');if(saved&&typeof saved==='object'&&Array.isArray(saved.habits)&&saved.logs&&typeof saved.logs==='object'&&!Array.isArray(saved.logs)){state={habits:saved.habits,logs:saved.logs,theme:saved.theme==='dark'?'dark':'light'}}}catch(e){}state=state||{habits:[],logs:{},theme:'light'};let cursor=new Date(today.getFullYear(),today.getMonth(),1),activeView='tracker';
 const save=()=>localStorage.setItem(KEY,JSON.stringify(state));const BACKUP_VERSION=1;
 function refreshData(){
   try{
@@ -998,3 +998,4 @@ function streakCurrent(){
   if(!streakSuccess(d))d.setDate(d.getDate()-1);
   while(streakSuccess(d)){
     count++;
+<!-- CLADHABITS state initialization hardening -->
