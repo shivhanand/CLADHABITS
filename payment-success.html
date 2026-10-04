@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CLADHABITS — Payment</title>
+<style>body{font-family:Inter,system-ui,sans-serif;background:#07142f;color:#fff;min-height:100vh;display:grid;place-items:center;margin:0}.card{width:min(520px,92vw);background:#0e2148;border:1px solid #27436f;border-radius:22px;padding:32px;text-align:center}button{padding:13px 20px;border:0;border-radius:12px;font-weight:700;cursor:pointer}.muted{color:#b8c6df}</style>
+</head><body><main class="card"><h1 id="title">Checking your payment…</h1><p class="muted" id="msg">Please wait while we verify the payment with Cashfree.</p><div id="action"></div></main>
+<script>
+(async()=>{const p=new URLSearchParams(location.search),id=p.get('order_id');if(!id){title.textContent='Missing order';msg.textContent='No payment order was supplied.';return}
+try{const r=await fetch('/functions/v1/cladhabits-payment-status?order_id='+encodeURIComponent(id));const d=await r.json();
+ if(d.status==='PAID'&&d.license_key){title.textContent='Payment successful 🎉';msg.textContent='Your CLADHABITS license has been created. Save this key:';action.innerHTML='<p><strong>'+d.license_key+'</strong></p><button onclick="location.href='/activate.html'">Activate CLADHABITS</button>'}
+ else if(d.status==='PAID'){title.textContent='Payment successful 🎉';msg.textContent='Your access is being prepared. Open activation and use the license delivered to you.';action.innerHTML='<button onclick="location.href='/activate.html'">Open activation</button>'}
+ else{title.textContent='Payment not completed';msg.textContent='Current status: '+(d.status||'UNKNOWN')+'. If you just paid, wait a moment and refresh.';action.innerHTML='<button onclick="location.reload()">Check again</button>'}
+}catch(e){title.textContent='Verification unavailable';msg.textContent='Please refresh in a moment.'}})();
+</script></body></html>
