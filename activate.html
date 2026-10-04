@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CLADHABITS — Activate</title>
+<style>
+  *{box-sizing:border-box} body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:#07111f;color:#f7fbff;padding:24px}
+  .card{width:min(460px,100%);padding:34px;border:1px solid rgba(255,255,255,.12);border-radius:24px;background:rgba(13,28,48,.94);box-shadow:0 24px 70px rgba(0,0,0,.35)}
+  .logo{font-weight:900;letter-spacing:.08em;font-size:22px;margin-bottom:10px}.sub{color:#aebdce;line-height:1.55;margin-bottom:26px}
+  label{display:block;font-size:13px;color:#cbd7e4;margin:0 0 8px}.field{width:100%;padding:14px 15px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:#081625;color:#fff;outline:none;margin-bottom:16px}.field:focus{border-color:#6fa7ff}
+  button{width:100%;padding:14px;border:0;border-radius:12px;background:#fff;color:#07111f;font-weight:800;cursor:pointer}.msg{min-height:22px;margin-top:16px;color:#aebdce;font-size:14px;line-height:1.45}.note{margin-top:22px;font-size:12px;color:#8192a6;line-height:1.5}
+</style>
+</head>
+<body>
+<main class="card">
+  <div class="logo">CLADHABITS</div>
+  <div class="sub">Activate your personal access on this device. Your license is limited to one device to prevent normal link sharing.</div>
+  <form id="form">
+    <label for="license">License key</label>
+    <input class="field" id="license" autocomplete="off" placeholder="CLAD-XXXX-XXXX-XXXX" required>
+    <label for="email">Purchase email</label>
+    <input class="field" id="email" type="email" autocomplete="email" placeholder="you@example.com" required>
+    <button id="btn" type="submit">Activate CLADHABITS</button>
+    <div class="msg" id="msg"></div>
+  </form>
+  <div class="note">Do not share your activation details. If the license is already activated, another device will be rejected.</div>
+</main>
+<script>
+const form=document.getElementById('form'),msg=document.getElementById('msg'),btn=document.getElementById('btn');
+const q=new URLSearchParams(location.search); if(q.get('key')) document.getElementById('license').value=q.get('key');
+form.addEventListener('submit',async e=>{
+ e.preventDefault(); msg.textContent='Checking your license…'; btn.disabled=true;
+ try{
+   const r=await fetch('/api/activate',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({licenseKey:document.getElementById('license').value,email:document.getElementById('email').value})});
+   const d=await r.json();
+   if(!r.ok||!d.valid) throw new Error(d.message||'Activation failed.');
+   msg.textContent='Activated. Opening your tracker…'; location.replace('/');
+ }catch(err){msg.textContent=err.message||'Activation failed.';btn.disabled=false;}
+});
+</script>
+</body>
+</html>
