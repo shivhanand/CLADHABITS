@@ -247,8 +247,7 @@ function selectedMonthBestPerfectStreak(){
 }
 
 /* ===== GLOBAL APP SURFACE FIX ===== */
-html,body{
-  min-height:100%;
+html,body{  min-height:100%;
   margin:0;
   background:var(--bg) !important;
 }
@@ -497,8 +496,7 @@ button{touch-action:manipulation}
   .month-reset-btn{white-space:nowrap}
 
   .stats-grid{grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
-  .stat{padding:13px;min-width:0}
-  .stat .value{font-size:22px}
+  .stat{padding:13px;min-width:0}  .stat .value{font-size:22px}
   .score-card .score-wrap{gap:10px}
   .score-ring{width:68px;height:68px}
   .score-ring:before{width:48px;height:48px}
@@ -747,8 +745,7 @@ function monthlyHeatmap(){
    }
    const isToday=iso(dt)===iso(today)?' today':'';
    cells+=`<button type="button" class="heat-cell ${cls}${isToday}" data-heat-date="${iso(dt)}" title="${dt.toLocaleDateString(undefined,{month:'long',day:'numeric',year:'numeric'})}: ${doneN} done · ${wrongN} wrong">${day}<span class="sr-only">${label}</span></button>`;
- }
- cells+='</div>';
+ } cells+='</div>';
  return `<div class="monthly-heatmap-section"><div class="heatmap-head"><div><h2>Monthly Heatmap</h2><div class="muted">${cursor.toLocaleString(undefined,{month:'long',year:'numeric'})} · tap any day for details</div></div><div class="heatmap-legend"><span class="heat-legend-item"><i class="heat-swatch high"></i> Strong</span><span class="heat-legend-item"><i class="heat-swatch mid"></i> Partial</span><span class="heat-legend-item"><i class="heat-swatch low"></i> Low / wrong</span><span class="heat-legend-item"><i class="heat-swatch empty"></i> Unmarked</span></div></div><div class="heatmap-calendar">${cells}</div><div class="heat-detail" id="heatDetail"><div><div class="heat-detail-title">Select a day</div><div class="heat-detail-meta">Tap a calendar square to inspect that day's results.</div></div><div class="heat-detail-stats"><span>✓ <strong>—</strong></span><span>✕ <strong>—</strong></span><span>○ <strong>—</strong></span></div></div></div>`;
 }
 function updateHeatDetail(dateKey){
@@ -998,4 +995,102 @@ function streakCurrent(){
   if(!streakSuccess(d))d.setDate(d.getDate()-1);
   while(streakSuccess(d)){
     count++;
-<!-- CLADHABITS state initialization hardening -->
+    d.setDate(d.getDate()-1);
+  }
+  return count;
+}
+function streakBest(){
+  if(!state.habits.length)return 0;
+  const start=new Date(today);
+  start.setDate(start.getDate()-364);
+  let best=0,run=0;
+  for(let d=new Date(start);d<=today;d.setDate(d.getDate()+1)){
+    if(streakSuccess(d)){run++;best=Math.max(best,run)}
+    else run=0;
+  }
+  return best;
+}
+function streakPerfectCurrent(){
+  if(!state.habits.length)return 0;
+  let d=new Date(today),count=0;
+  if(!streakPerfect(d))d.setDate(d.getDate()-1);
+  while(streakPerfect(d)){
+    count++;
+    d.setDate(d.getDate()-1);
+  }
+  return count;
+}
+function streakBestPerfect(){
+  if(!state.habits.length)return 0;
+  const start=new Date(today);
+  start.setDate(start.getDate()-364);
+  let best=0,run=0;
+  for(let d=new Date(start);d<=today;d.setDate(d.getDate()+1)){
+    if(streakPerfect(d)){run++;best=Math.max(best,run)}
+    else run=0;
+  }
+  return best;
+}
+
+function habitMonthCurrentStreak(h){
+  let d=new Date(selectedMonthEnd()),count=0;
+  if(status(h,d)!==1)d.setDate(d.getDate()-1);
+  while(selectedMonthDate(d)&&status(h,d)===1){
+    count++;d.setDate(d.getDate()-1);
+  }
+  return count;
+}
+function habitMonthBestStreak(h){
+  const start=selectedMonthStart(),end=selectedMonthEnd();
+  let best=0,run=0;
+  for(let d=new Date(start);d<=end;d.setDate(d.getDate()+1)){
+    if(status(h,d)===1){run++;best=Math.max(best,run)}
+    else run=0;
+  }
+  return best;
+}
+
+function streakCenter(){
+  const box=document.getElementById('streakCenterMount');
+  if(!box)return;
+
+  if(!state.habits.length){
+    box.innerHTML=`<div class="streak-center-card">
+      <div class="streak-center-head">
+        <div><h2>Streak Center <span class="pill" style="font-size:10px;vertical-align:middle">FEATURE 5</span></h2>
+        <div class="muted">Build consistency one day at a time.</div></div>
+      </div>
+      <div class="trend-empty">Add a habit to start your streak.</div>
+    </div>`;
+    return;
+  }
+
+  const current=selectedMonthCurrentStreak();
+  const best=selectedMonthBestStreak();
+  const perfectCurrent=selectedMonthCurrentPerfectStreak();
+  const perfectBest=selectedMonthBestPerfectStreak();
+  const streakEnd=selectedMonthEnd();
+  const todayData=streakDayData(streakEnd);
+
+  const days=[];
+  for(let i=27;i>=0;i--){
+    const d=new Date(streakEnd);
+    d.setDate(d.getDate()-i);
+    days.push(streakDayData(d));
+  }
+
+  let message;
+  if(todayData.kind==='perfect') message='Perfect day. Every habit is recorded as Done. 🔥';
+  else if(todayData.kind==='success') message=`You're active today at ${todayData.completion}% completion. Keep the streak alive.`;
+  else if(todayData.kind==='wrong') message='A Wrong result does not end your effort — use the next check-in to recover.';
+  else message='The selected month has no active result at its current end point yet. Mark habits to start or continue the streak.';
+
+  const cells=days.map(x=>{
+    const key=iso(x.date);
+    const label=x.date.toLocaleDateString(undefined,{month:'short',day:'numeric'});
+    const isToday=key===iso(streakEnd);
+    const kind=x.kind;
+    return `<div class="streak-day ${kind} ${isToday?'today':''}" data-streak-date="${key}" title="${label}">
+      <span class="streak-day-tooltip">${label} · ${kind==='perfect'?'Perfect':kind==='success'?'Successful':kind==='wrong'?'Wrong':'Unmarked'}${x.recorded?' · '+x.completion+'%':''}</span>
+    </div>`;
+  }).join('');
