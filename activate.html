@@ -39,6 +39,7 @@ const form=document.getElementById('form');
 const msg=document.getElementById('msg');
 const btn=document.getElementById('btn');
 const keyField=document.getElementById('license');
+const API='https://glmsrbyczxikwlhxyalv.supabase.co/functions/v1/cladhabits-license-activate';
 
 const q=new URLSearchParams(location.search);
 if(q.get('key')) keyField.value=q.get('key');
@@ -57,37 +58,56 @@ function getDeviceId(){
   }
 }
 
+function setSessionCookie(token, expiresAt){
+  const maxAge=Math.max(60, Math.floor((new Date(expiresAt).getTime()-Date.now())/1000));
+  document.cookie='clad_session='+encodeURIComponent(token)+'; Path=/; Max-Age='+maxAge+'; Secure; SameSite=Lax';
+}
+
 form.addEventListener('submit',async e=>{
   e.preventDefault();
   msg.textContent='Checking your license…';
   btn.disabled=true;
 
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),15000);
+
   try{
-    const response=await fetch('/api/activate',{
+    const response=await fetch(API,{
       method:'POST',
       headers:{'content-type':'application/json'},
       body:JSON.stringify({
-        licenseKey:keyField.value,
-        email:document.getElementById('email').value,
+        license_key:keyField.value.trim(),
+        email:document.getElementById('email').value.trim(),
         fingerprint:getDeviceId()
-      })
+      }),
+      signal:controller.signal
     });
 
     const data=await response.json().catch(()=>({}));
-    if(!response.ok || !data.valid){
-      const reason=data.reason||'';
+    if(!response.ok||!data?.ok){
+      const reason=data?.reason||'';
       const message =
         reason==='email_mismatch' ? 'The email does not match your purchase.' :
         reason==='activation_limit_reached' ? 'This license is already active on another device.' :
-        data.message || 'Activation failed.';
+        reason==='invalid_or_expired' ? 'License not found, inactive, or expired.' :
+        data?.message || 'Activation failed. Please check your details and try again.';
       throw new Error(message);
     }
 
+    if(!data.session_token||!data.session_expires_at){
+      throw new Error('Activation succeeded, but the secure access session could not be created.');
+    }
+
+    setSessionCookie(data.session_token,data.session_expires_at);
     msg.textContent='Activated. Opening your tracker…';
-    location.replace('/');
+    setTimeout(()=>location.replace('/'),250);
   }catch(err){
-    msg.textContent=err.message||'Activation failed.';
+    msg.textContent=err.name==='AbortError'
+      ? 'The activation service took too long to respond. Please try again.'
+      : (err.message||'Activation failed.');
     btn.disabled=false;
+  }finally{
+    clearTimeout(timeout);
   }
 });
 </script>
