@@ -1,0 +1,1 @@
+(()=>{document.documentElement.style.visibility='hidden';fetch('/api/session-check',{credentials:'include',cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{if(d&&d.ok){document.documentElement.style.visibility='visible';}else{location.replace('/activate.html');}}).catch(()=>{location.replace('/activate.html');});})();
