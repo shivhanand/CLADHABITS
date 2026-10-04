@@ -1,1 +1,1 @@
-CLADHABITS deployment refresh — 2026-10-04
+Protected tracker routing fix deployed.
