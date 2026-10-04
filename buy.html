@@ -6,8 +6,9 @@
 <form id="form"><input id="name" placeholder="Full name" required><input id="email" type="email" placeholder="Email used for purchase" required><input id="phone" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" required><button>Continue to secure payment</button></form><div class="status" id="status"></div></main>
 <script>
 const form=document.getElementById('form'),status=document.getElementById('status');
+const API='https://glmsrbyczxikwlhxyalv.supabase.co/functions/v1';
 form.addEventListener('submit',async e=>{e.preventDefault();status.textContent='Creating secure payment…';try{
- const r=await fetch('/functions/v1/cladhabits-create-order',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:name.value,email:email.value,phone:phone.value})});
+ const r=await fetch(API+'/cladhabits-create-order',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:name.value,email:email.value,phone:phone.value})});
  const d=await r.json(); if(!r.ok||!d.ok) throw new Error(d.reason||'Unable to start payment');
  const cashfree=Cashfree({mode:d.mode==='production'?'production':'sandbox'});
  await cashfree.checkout({paymentSessionId:d.payment_session_id,redirectTarget:'_self'});
