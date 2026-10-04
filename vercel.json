@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/tracker.js": {
+      "includeFiles": ["index.html"]
+    }
+  },
+  "routes": [
+    { "src": "^/$", "dest": "/api/tracker.js" },
+    { "src": "^/index\\.html$", "dest": "/api/tracker.js" }
+  ]
+}
