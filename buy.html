@@ -5,10 +5,15 @@
 </head><body><main class="card"><h1>CLADHABITS</h1><p class="muted">One purchase. One protected personal access.</p>
 <form id="form"><input id="name" placeholder="Full name" required><input id="email" type="email" placeholder="Email used for purchase" required><input id="phone" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" required><button>Continue to secure payment</button></form><div class="status" id="status"></div></main>
 <script>
-const form=document.getElementById('form'),status=document.getElementById('status');
+const form=document.getElementById('form');
+const status=document.getElementById('status');
+const nameInput=document.getElementById('name');
+const emailInput=document.getElementById('email');
+const phoneInput=document.getElementById('phone');
 const API='https://glmsrbyczxikwlhxyalv.supabase.co/functions/v1';
+
 form.addEventListener('submit',async e=>{e.preventDefault();status.textContent='Creating secure payment…';try{
- const r=await fetch(API+'/cladhabits-create-order',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:name.value,email:email.value,phone:phone.value})});
+ const r=await fetch(API+'/cladhabits-create-order',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:nameInput.value.trim(),email:emailInput.value.trim(),phone:phoneInput.value.replace(/\D/g,'')})});
  const d=await r.json(); if(!r.ok||!d.ok) throw new Error(d.reason||'Unable to start payment');
  const cashfree=Cashfree({mode:d.mode==='production'?'production':'sandbox'});
  await cashfree.checkout({paymentSessionId:d.payment_session_id,redirectTarget:'_self'});
