@@ -16,6 +16,10 @@ form.addEventListener('submit',async e=>{e.preventDefault();status.textContent='
  const r=await fetch(API+'/cladhabits-create-order',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:nameInput.value.trim(),email:emailInput.value.trim(),phone:phoneInput.value.replace(/\D/g,'')})});
  const d=await r.json(); if(!r.ok||!d.ok) throw new Error(d.reason||'Unable to start payment');
  const cashfree=Cashfree({mode:d.mode==='production'?'production':'sandbox'});
- await cashfree.checkout({paymentSessionId:d.payment_session_id,redirectTarget:'_self'});
+ const result=await cashfree.checkout({paymentSessionId:d.payment_session_id,redirectTarget:'_self'});
+ if(result?.error){
+   console.error('Cashfree checkout error',result.error);
+   throw new Error(result.error.message || result.error.status || 'Cashfree checkout could not be opened.');
+ }
 }catch(err){status.textContent=err.message||'Payment could not be started.';}});
 </script></body></html>
